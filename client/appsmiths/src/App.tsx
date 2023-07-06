@@ -16,6 +16,11 @@ import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
 import { Button } from '@mui/material';
 import DeleteModal from './components/modals/deleteModal';
 import { deleteUser } from './services/deleteUser';
+import { updateSuscription } from './services/updateSuscription';
+import CreateModal from './components/modals/createModal';
+import { createUser } from './services/createUser';
+import { Inputs } from './types';
+import { updateUser } from './services/updateUser';
 
 interface User {
   id: number;
@@ -29,8 +34,9 @@ interface User {
 }
 
 function App() {
+  const [idApp, setIdApp] = useState(0)
   const [ users, setUsers ] = useState<User[] | undefined>([])
-  const [modals, setModals] = useState({
+  const [ modals, setModals ] = useState({
     create: false,
     update: false,
     edit: false,
@@ -46,10 +52,10 @@ function App() {
 
   useEffect(handleUsers, [])
 
-  const handleModal = (modal:string) => {
-    const copiedModal: any = {...modals}
-    console.log(modal)
-    copiedModal[modal] = true
+  const handleModal = (modal: string, id?: number) => {
+    setIdApp(id ?? 0)
+    const copiedModal: any = { ...modals }
+    copiedModal[ modal ] = true
     setModals(copiedModal)
   }
 
@@ -65,22 +71,41 @@ function App() {
   const handleDlete = (id: number) => () => {
     deleteUser(id)
       .then(() => {
-        setModals({
-          create: false,
-          update: false,
-          edit: false,
-          delete: false,
-        })
+        handleClose()
+        handleUsers()
+      })
+  }
+  const handleUpdate = (id: number) => (months: number | null) => {
+    if (months === null) return alert('Should select the duration')
+    updateSuscription(id, months)
+      .then(() => {
+        handleClose()
         handleUsers()
       })
   }
 
+  const handleCreate = (data: Inputs) => {
+    if (Object.values(data).some(el => el === '')) return alert('All fields are required')
+    createUser(data).then(() => {
+      handleClose()
+      handleUsers()
+    })
+  };
+
+  const handleUpdateUser = (id: number) => (data: Inputs) => {
+    if (Object.values(data).some(el => el === '')) return alert('All fields are required')
+    updateUser(data, id).then(() => {
+      handleClose()
+      handleUsers()
+    })
+  }
+
   return (
     <>
-      {modals.update && <UpdateSuscriptionModal />}
-      {modals.edit && <EditModal />}
-      
-      {modals.create && <EditModal />}
+      {modals.create && <CreateModal closeModal={handleClose} create={handleCreate} />}
+      {modals.delete && <DeleteModal closeModal={handleClose} toDelete={handleDlete(idApp)} />}
+      {modals.update && <UpdateSuscriptionModal closeModal={handleClose} update={handleUpdate(idApp)} />}
+      {modals.edit && <EditModal closeModal={handleClose} update={handleUpdateUser(idApp)} id={idApp} />}
       <Button onClick={() => handleModal('create')}>Create</Button>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} size="small" aria-label="a dense table">
@@ -108,21 +133,20 @@ function App() {
                     <TableCell align="right">{info}</TableCell>
                 )}
                 <TableCell>
-                  <Button onClick={() => handleModal('edit')} variant="contained">
+                  <Button onClick={() => handleModal('edit', user.id)} variant="contained">
                     <ChangeCircleIcon />
                   </Button>
                 </TableCell>
                 <TableCell>
-                  <Button onClick={() => handleModal('update')} variant="outlined" color='success'>
+                  <Button onClick={() => handleModal('update', user.id)} variant="outlined" color='success'>
                     <AccessAlarmsIcon />
                   </Button>
                 </TableCell>
                 <TableCell>
-                  <Button onClick={() => handleModal('delete')} variant="contained" color="error">
+                  <Button onClick={() => handleModal('delete', user.id)} variant="contained" color="error">
                     <DeleteIcon />
                   </Button>
                 </TableCell>
-                {modals.delete && <DeleteModal closeModal={handleClose} toDelete={handleDlete(user.id)} />}
               </TableRow>
             ))}
           </TableBody>
